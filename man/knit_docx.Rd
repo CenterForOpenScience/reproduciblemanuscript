@@ -8,8 +8,8 @@ knit_docx(
   template_docx_file = NA,
   template_drive_ID = NA,
   knitted_docx_file = NA,
-  knitted_docx_google_ID = NA,
-  placeholder_generation_code_file = NA
+  knitted_drive_ID = NA,
+  placeholder_object_source = NA
 )
 }
 \arguments{

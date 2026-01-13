@@ -4,7 +4,14 @@
 \alias{bundle_ggplot}
 \title{Bundles ggplot object with dimensions}
 \usage{
-bundle_ggplot(plot, width = 6.5, height = 4, unit = "in")
+bundle_ggplot(
+  plot,
+  width = 6.5,
+  height = 4,
+  units = "in",
+  bg = "white",
+  scaling = "autoheight"
+)
 }
 \arguments{
 \item{plot}{A ggplot plot}
@@ -13,7 +20,11 @@ bundle_ggplot(plot, width = 6.5, height = 4, unit = "in")
 
 \item{height}{Numerical height of the ggplot # needed to insert into documents}
 
-\item{unit}{The units the height and width are in (defaults to "in")}
+\item{units}{The units the height and width are in (defaults to "in")}
+
+\item{bg}{Sets the background color, defaults to white}
+
+\item{scaling}{Sets the scaling, with an option to scale the figure to the standard document width (6.5in) and the proportionate height}
 }
 \description{
 A wrapper function for ggplot objects that specifies the dimensions they will be in. Needed because .docx and other document types require dimensions for images
@@ -22,5 +33,4 @@ A wrapper function for ggplot objects that specifies the dimensions they will be
 knit_docx(
 template_docx_file = template_docx_file,
 knitted_docx_file = knitted_docx_file)
-
 }
