@@ -144,7 +144,7 @@ knit_docx <- function(template_docx_file=NA,
 #' knit_docx(
 #' template_docx_file = template_docx_file,
 #' knitted_docx_file = knitted_docx_file)
-#'
+
 #' @rdname bundle_ggplot
 #' @title Bundles ggplot object with dimensions
 #' @description A wrapper function for ggplot objects that specifies the dimensions they will be in. Needed because .docx and other document types require dimensions for images
@@ -181,74 +181,4 @@ preview_bundled_ggplot <- function(bundled_ggplot){
     bg = NULL
   )
   rstudioapi::viewer(file)
-}
-
-#' @rdname format.round
-#' @title Format rounded numbers
-#' @description A text convenience function for more readable rounded numbers. Allows for rounding to specified digits (including lagging 0's), keeping leading zeros, and uses half-up rounding
-#' @param x The number to be rounded
-#' @param digits The number of digits to round to
-#' @param leading_zero TRUE/FALSE, if enabled (default=TRUE) allows the leading zero in a decimal (e.g. the zero in 0.23) when a number is between -1 and 1
-#' @param round_half_up TRUE/FALSE, if enabled (default=TRUE) uses half-up rounding instead of R's default round to even
-#' @export
-
-format.round <- function(x,digits=1,leading_zero=TRUE,round_half_up=TRUE){
-  if (round_half_up==TRUE){
-    x <- sign(x) * trunc(abs(x) * 10^digits + 0.5 + sqrt(.Machine$double.eps))/10^digits # corrects for rounding so half rounds up
-  }
-  out <- format(x, nsmall=digits,trim=TRUE)
-  if(leading_zero==FALSE){
-    out <- ifelse(substr(out, start = 1, stop = 2)=="0.",
-                  substr(out, start = 2, stop = nchar(out)),
-                  out)
-    out <- ifelse(substr(out, start = 1, stop = 3)=="-0.",
-                  paste0("-",substr(out, start = 3, stop = nchar(out))),
-                  out)
-  }
-  return(out)
-}
-
-
-#' @rdname format.text.CI
-#' @title Formats CIs and point estimates for text output
-#' @description Convenience function that outputs a number and CI bounds as a well formatted text string
-#' @param point.estimate The point estimate of the statistic
-#' @param CI.lb The confidence interval lower bound of the statistic
-#' @param CI.ub The confidence interval upper bound of the statistic
-#' @param ... Specify any arguments to be passed to format.round
-#' @param format.percent Specifies whether to format the outputs as percentages
-#' @param alpha The alpha level. E.g. alpha = .05 will show in text as "95% CI"
-#' @param CI.prefix = TRUE TRUE/FALSE Enables or disables the text about the alpha bound
-#' @param CI.sep The text separator between the confidence bounds
-#' @param CI.bracket=c("[","]") The brackets for the confidence bounds
-#' @export
-
-
-format.text.CI <- function(point.estimate,CI.lb,CI.ub,...,format.percent=FALSE,alpha=.05,
-                           CI.prefix = TRUE,CI.sep=" - ",CI.bracket=c("[","]")){
-  if (format.percent==TRUE){
-    point.estimate <- 100*point.estimate
-    CI.lb <- 100*CI.lb
-    CI.ub <- 100*CI.ub
-    end.notation <- "%"
-  } else {
-    end.notation <- ""
-  }
-
-  paste0(format.round(point.estimate,...),
-         end.notation," ",CI.bracket[1],
-         {if(CI.prefix){ paste0(100*(1-alpha),"% CI ")} else {""}},
-         format.round(CI.lb,...),CI.sep,format.round(CI.ub,...),
-         end.notation,CI.bracket[2])
-}
-
-#' @rdname format.text.percent
-#' @title Format a number as a percent
-#' @description Convenience function which multiplies the number by 100, rounds it, and adds a % sign
-#' @param x The number to be formatted as a percent
-#' @param ... Specify any arguments to be passed to format.round
-#' @export
-
-format.text.percent <- function(x,...){
-  paste0(format.round(100*x,...),"%")
 }

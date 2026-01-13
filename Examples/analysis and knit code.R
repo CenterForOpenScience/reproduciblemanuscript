@@ -1,7 +1,7 @@
 # Libraries
-library(Hmisc)
+#library(Hmisc)
 library(ggplot2)
-library(reproduciblemanuscript) # devtools::install_github("noahhaber/reproduciblemanuscript")
+library(reproduciblemanuscript) # devtools::install_github("CenterForOpenScience/reproduciblemanuscript")
 
 # Placeholder statistics
 start_date <- format(as.Date("05/02/2025","%m/%d/%Y"),format="%B %d, %Y")
@@ -13,7 +13,9 @@ n_authors_cons <- 525
 n_participants_randomized <- 22
 n_participants_RR <- 10
 n_participants_SP <- 12
-p_participants_editorial_decisions <- format.text.percent(n_participants_returned_revisions/n_participants_editorial_decisions)
+p_participants_editorial_decisions <-
+  paste0(round(100*(n_participants_returned_revisions/n_participants_editorial_decisions),1),
+         "%")
 
 # Example plot: Iris petals plot
 {
