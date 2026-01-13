@@ -15,19 +15,18 @@
 #' @return Nothing
 #' @export
 
-knit_docx <- function(template_docx_file=NA,
-                      template_drive_ID=NA,
+knit_docx <- function(template_docx_file = NA,
+                      template_drive_ID = NA,
                       knitted_docx_file = NA,
-                      knitted_docx_google_ID=NA,
-                      placeholder_generation_code_file = NA
-                      ){
+                      knitted_drive_ID = NA,
+                      placeholder_object_source = NA ){
   # Libraries
   library(officer)
   library(ggplot2)
   library(pandoc)
 
   # Authorize google docs if needed
-  if(!is.na(template_drive_ID) | !is.na(knitted_docx_google_ID)) {
+  if(!is.na(template_drive_ID) | !is.na(knitted_drive_ID)) {
     library(googledrive)
     drive_auth()
   }
@@ -36,7 +35,7 @@ knit_docx <- function(template_docx_file=NA,
   if (is.na(template_docx_file) & is.na(template_drive_ID)) {
     errorCondition("You must specify a path or google drive ID for the template doc.")
   }
-  if (is.na(knitted_docx_file) & is.na(knitted_docx_google_ID)) {
+  if (is.na(knitted_docx_file) & is.na(knitted_drive_ID)) {
     errorCondition("You must specify a path or google drive ID for the knitted doc.")
   }
 
@@ -44,41 +43,52 @@ knit_docx <- function(template_docx_file=NA,
   if (!is.na(template_docx_file) & !is.na(template_drive_ID)) {
     errorCondition("You must choose either a path or google drive ID for the template doc, not both.")
   }
-  if (!is.na(knitted_docx_file) & !is.na(knitted_docx_google_ID)) {
+  if (!is.na(knitted_docx_file) & !is.na(knitted_drive_ID)) {
     errorCondition("You must specify either a path or google drive ID for the knitted doc, not both.")
   }
 
   # Get all objects in the specified environment
-  if (!is.na(placeholder_generation_code_file)){
+
+  if (is.list(placeholder_object_source)){
+    # List of objects
+    generated_objects <- placeholder_object_source
+  } else if (is.na(placeholder_object_source)){
+    # Unlisted (use global)
+    generated_objects <- rev(as.list(globalenv()))
+  } else if (endsWith(placeholder_object_source,".R")){
+    # Source script
     get_environment <- function(file){
       source(file,local=TRUE)
       return(rev(as.list(environment())))
     }
-    generated_objects <- get_environment(placeholder_generation_code_file)
+    generated_objects <- get_environment(placeholder_object_source)
   } else {
-    generated_objects <- rev(as.list(globalenv()))
+    # Not found
+    errorCondition("Source not identified")
   }
+
 
   # Get and prep the template doc
-  docx_out <- tempfile(fileext = ".docx")
-  if (!is.na(template_drive_ID)) {
-    drive_file_name <- drive_get(as_id(template_drive_ID))$name
-    if (substr(drive_file_name, nchar(drive_file_name)-4, nchar(drive_file_name))==".docx"){
-      native.docx <- TRUE
-    } else {native.docx <- FALSE}
-    drive_download(file=as_id(template_drive_ID), path = docx_out)
-  } else {
-    native.docx <- TRUE
-  }
-
   # Run docx-docx conversion hack to merge .docx chunks if native .docx.
   # This step is necessary because text blocks are stored in chunks, including
   # in some instances within the same word. To make things find/replaceable, the
   # full placeholder name must be all in one chunk. "Converting" the file reorganizes
   # the text chunks, allowing placeholders to be found/replaced consistently.
-  if(native.docx == TRUE){
-    pandoc::pandoc_convert(file = docx_out, from="docx", to = "docx",output=docx_out)
+  docx_out <- tempfile(fileext = ".docx")
+  if (!is.na(template_drive_ID)) {
+    drive_file_name <- drive_get(as_id(template_drive_ID))$name
+    drive_download(file=as_id(template_drive_ID), path = docx_out)
+    if (substr(drive_file_name, nchar(drive_file_name)-4, nchar(drive_file_name))==".docx"){
+
+      pandoc::pandoc_convert(file = docx_out, from="docx", to = "docx",output=docx_out)
+    }
+  } else {
+    # Get styles before conversion (which loses them)
+    doc <- read_docx(path = template_docx_file)
+    styles <- styles_info(doc)
+    pandoc::pandoc_convert(file = template_docx_file, from="docx", to = "docx",output=docx_out)
   }
+
   doc <- read_docx(path = docx_out)
 
   # Check classes of objects so they can be set in appropriate types
@@ -118,26 +128,38 @@ knit_docx <- function(template_docx_file=NA,
            plot = generated_objects[[figure_name]]$plot,
            height = generated_objects[[figure_name]]$height,
            width = generated_objects[[figure_name]]$width,
-           units = generated_objects[[figure_name]]$unit)
+           units = generated_objects[[figure_name]]$unit,
+           bg = generated_objects[[figure_name]]$bg)
 
     # Find and replace figure placeholders
     if (cursor_reach_test(doc, paste0("\\{",figure_name,"\\}"))){
       doc <- cursor_begin(doc)
       doc <- cursor_reach(doc, paste0("\\{",figure_name,"\\}"))
-      doc <- body_add_img(x = doc, src = png_out,pos="on",
-                          height=generated_objects[[figure_name]]$height,
-                          width=generated_objects[[figure_name]]$width,
-                          unit=generated_objects[[figure_name]]$unit)
+      if(generated_objects[[figure_name]]$scaling=="autoheight"){
+        doc <- body_add_img(x = doc, src = png_out,pos="on",
+                            height=6.5*generated_objects[[figure_name]]$height/generated_objects[[figure_name]]$width,
+                            width=6.5,
+                            unit="in")
+      } else {
+        doc <- body_add_img(x = doc, src = png_out,pos="on",
+                            height=generated_objects[[figure_name]]$height,
+                            width=generated_objects[[figure_name]]$width,
+                            unit=generated_objects[[figure_name]]$units)
+      }
     }
   }
 
   # Export knitted doc
-  if (!is.na(knitted_docx_file)) { print(doc, target=knitted_docx_file)}
-  if (!is.na(knitted_docx_google_ID)) {
+  if (!is.na(knitted_docx_file)) {
+    print("Saving knitted document locally")
+    print(doc, target=knitted_docx_file)
+  }
+  if (!is.na(knitted_drive_ID)) {
+    print("Uploading knitted doc to Google Drive")
     temp_for_upload <- tempfile(fileext = ".docx")
     print(doc, target=temp_for_upload)
-    drive_update(media=temp_for_upload,file=as_id(knitted_docx_google_ID))
-    }
+    drive_update(media=temp_for_upload,file=as_id(knitted_drive_ID))
+  }
 }
 
 #' @examples
@@ -151,12 +173,20 @@ knit_docx <- function(template_docx_file=NA,
 #' @param plot A ggplot plot
 #' @param width Numerical width of the ggplot # needed to insert into documents
 #' @param height Numerical height of the ggplot # needed to insert into documents
-#' @param unit The units the height and width are in (defaults to "in")
+#' @param units The units the height and width are in (defaults to "in")
+#' @param bg Sets the background color, defaults to white
+#' @param scaling Sets the scaling, with an option to scale the figure to the standard document width (6.5in) and the proportionate height
 #' @export
 
 # Bundle up ggplot objects so they can be inserted with dimensions into the document
-bundle_ggplot <- function(plot,width=6.5,height=4,unit="in"){
-  structure(list(plot=plot,height=height,width=width,unit=unit),class="bundled_ggplot")
+bundle_ggplot <- function(plot,width=6.5,height=4,units="in",bg="white",scaling="autoheight"){
+  structure(list(plot=plot,
+                 height=height,
+                 width=width,
+                 units=units,
+                 bg=bg,
+                 scaling=scaling),
+            class="bundled_ggplot")
 }
 
 #' @rdname preview_bundled_ggplot
@@ -181,4 +211,23 @@ preview_bundled_ggplot <- function(bundled_ggplot){
     bg = NULL
   )
   rstudioapi::viewer(file)
+}
+
+#' @rdname export_bundled_ggplot
+#' @title Exports bundled ggplot object as it will appear in print
+#' @description A convenience function so that you can create a file with dimensions as specified in the bundled ggplot object
+#' @param bundled_ggplot The bundled ggplot from the bundle_ggplot object
+#' @export
+export_bundled_ggplot <- function(bundled_ggplot,file,device="png"){
+  ggplot2::ggsave(
+    file,
+    plot = bundled_ggplot$plot,
+    device = device,
+    scale = 1,
+    width = bundled_ggplot$width,
+    height = bundled_ggplot$height,
+    units = bundled_ggplot$unit,
+    limitsize = TRUE,
+    bg = NULL
+  )
 }
