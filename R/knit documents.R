@@ -208,12 +208,21 @@ format.round <- function(x,digits=1,leading_zero=TRUE,round_half_up=TRUE){
   return(out)
 }
 
-#' @rdname format.text.percent
-#' @title Format a number as a percent
-#' @description Convenience function which multiplies the number by 100, rounds it, and adds a % sign
-#' @param x The number to be formatted as a percent
+
+#' @rdname format.text.CI
+#' @title Formats CIs and point estimates for text output
+#' @description Convenience function that outputs a number and CI bounds as a well formatted text string
+#' @param point.estimate The point estimate of the statistic
+#' @param CI.lb The confidence interval lower bound of the statistic
+#' @param CI.ub The confidence interval upper bound of the statistic
 #' @param ... Specify any arguments to be passed to format.round
+#' @param format.percent Specifies whether to format the outputs as percentages
+#' @param alpha The alpha level. E.g. alpha = .05 will show in text as "95% CI"
+#' @param CI.prefix = TRUE TRUE/FALSE Enables or disables the text about the alpha bound
+#' @param CI.sep The text separator between the confidence bounds
+#' @param CI.bracket=c("[","]") The brackets for the confidence bounds
 #' @export
+
 
 format.text.CI <- function(point.estimate,CI.lb,CI.ub,...,format.percent=FALSE,alpha=.05,
                            CI.prefix = TRUE,CI.sep=" - ",CI.bracket=c("[","]")){
@@ -233,18 +242,11 @@ format.text.CI <- function(point.estimate,CI.lb,CI.ub,...,format.percent=FALSE,a
          end.notation,CI.bracket[2])
 }
 
-#' @rdname format.text.CI
-#' @title Formats CIs and point estimates for text output
-#' @description Convenience function that outputs a number and CI bounds as a well formatted text string
-#' @param point.estimate The point estimate of the statistic
-#' @param CI.lb The confidence interval lower bound of the statistic
-#' @param CI.ub The confidence interval upper bound of the statistic
+#' @rdname format.text.percent
+#' @title Format a number as a percent
+#' @description Convenience function which multiplies the number by 100, rounds it, and adds a % sign
+#' @param x The number to be formatted as a percent
 #' @param ... Specify any arguments to be passed to format.round
-#' @param format.percent Specifies whether to format the outputs as percentages
-#' @param alpha The alpha level. E.g. alpha = .05 will show in text as "95% CI"
-#' @param CI.prefix = TRUE TRUE/FALSE Enables or disables the text about the alpha bound
-#' @param CI.sep The text separator between the confidence bounds
-#' @param CI.bracket=c("[","]") The brackets for the confidence bounds
 #' @export
 
 format.text.percent <- function(x,...){
